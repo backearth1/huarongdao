@@ -16,6 +16,7 @@ class _GameScreenState extends State<GameScreen> {
   Timer? timer;
   int seconds = 0;
   bool isGameActive = false;
+  Offset _dragOffset = Offset.zero;
 
   @override
   void initState() {
@@ -53,19 +54,63 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  void _onTileTap(int index) {
+  void _onDragStart(DragStartDetails details) {
+    _dragOffset = Offset.zero;
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    _dragOffset += details.delta;
+  }
+
+  void _onDragEnd(int index) {
     if (puzzle.isSolved()) return;
+
+    // Need minimum drag distance to register as a swipe
+    const double minDragDistance = 20.0;
+    if (_dragOffset.distance < minDragDistance) return;
 
     _startTimer();
 
-    setState(() {
-      if (puzzle.moveTile(index)) {
+    double dx = _dragOffset.dx;
+    double dy = _dragOffset.dy;
+
+    int row = index ~/ widget.size;
+    int col = index % widget.size;
+    int emptyRow = puzzle.emptyIndex ~/ widget.size;
+    int emptyCol = puzzle.emptyIndex % widget.size;
+
+    // Determine swipe direction and check if it moves towards empty space
+    bool moved = false;
+    if (dx.abs() > dy.abs()) {
+      // Horizontal swipe
+      if (dx > 0 && row == emptyRow && col == emptyCol + 1) {
+        // Swipe right, empty is on the left
+        moved = puzzle.moveTile(index);
+      } else if (dx < 0 && row == emptyRow && col == emptyCol - 1) {
+        // Swipe left, empty is on the right
+        moved = puzzle.moveTile(index);
+      }
+    } else {
+      // Vertical swipe
+      if (dy > 0 && col == emptyCol && row == emptyRow + 1) {
+        // Swipe down, empty is above
+        moved = puzzle.moveTile(index);
+      } else if (dy < 0 && col == emptyCol && row == emptyRow - 1) {
+        // Swipe up, empty is below
+        moved = puzzle.moveTile(index);
+      }
+    }
+
+    if (moved) {
+      setState(() {
         if (puzzle.isSolved()) {
           _stopTimer();
           _showWinDialog();
         }
-      }
-    });
+      });
+    }
+
+    _dragOffset = Offset.zero;
   }
 
   void _showWinDialog() {
@@ -250,7 +295,9 @@ class _GameScreenState extends State<GameScreen> {
           bool canMove = puzzle.canMove(index);
 
           return GestureDetector(
-            onTap: () => _onTileTap(index),
+            onPanStart: _onDragStart,
+            onPanUpdate: _onDragUpdate,
+            onPanEnd: (_) => _onDragEnd(index),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
