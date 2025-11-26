@@ -16,7 +16,6 @@ class _GameScreenState extends State<GameScreen> {
   Timer? timer;
   int seconds = 0;
   bool isGameActive = false;
-  Offset _dragOffset = Offset.zero;
 
   @override
   void initState() {
@@ -54,63 +53,19 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  void _onDragStart(DragStartDetails details) {
-    _dragOffset = Offset.zero;
-  }
-
-  void _onDragUpdate(DragUpdateDetails details) {
-    _dragOffset += details.delta;
-  }
-
-  void _onDragEnd(int index) {
+  void _onTileTap(int index) {
     if (puzzle.isSolved()) return;
-
-    // Need minimum drag distance to register as a swipe
-    const double minDragDistance = 20.0;
-    if (_dragOffset.distance < minDragDistance) return;
 
     _startTimer();
 
-    double dx = _dragOffset.dx;
-    double dy = _dragOffset.dy;
-
-    int row = index ~/ widget.size;
-    int col = index % widget.size;
-    int emptyRow = puzzle.emptyIndex ~/ widget.size;
-    int emptyCol = puzzle.emptyIndex % widget.size;
-
-    // Determine swipe direction and check if it moves towards empty space
-    bool moved = false;
-    if (dx.abs() > dy.abs()) {
-      // Horizontal swipe
-      if (dx > 0 && row == emptyRow && col == emptyCol + 1) {
-        // Swipe right, empty is on the left
-        moved = puzzle.moveTile(index);
-      } else if (dx < 0 && row == emptyRow && col == emptyCol - 1) {
-        // Swipe left, empty is on the right
-        moved = puzzle.moveTile(index);
-      }
-    } else {
-      // Vertical swipe
-      if (dy > 0 && col == emptyCol && row == emptyRow + 1) {
-        // Swipe down, empty is above
-        moved = puzzle.moveTile(index);
-      } else if (dy < 0 && col == emptyCol && row == emptyRow - 1) {
-        // Swipe up, empty is below
-        moved = puzzle.moveTile(index);
-      }
-    }
-
-    if (moved) {
-      setState(() {
+    setState(() {
+      if (puzzle.moveTile(index)) {
         if (puzzle.isSolved()) {
           _stopTimer();
           _showWinDialog();
         }
-      });
-    }
-
-    _dragOffset = Offset.zero;
+      }
+    });
   }
 
   void _showWinDialog() {
@@ -166,7 +121,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.size}×${widget.size} 数字华容道'),
+        title: Text('${widget.size}×${widget.size} 菀尔华容道'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
@@ -295,9 +250,7 @@ class _GameScreenState extends State<GameScreen> {
           bool canMove = puzzle.canMove(index);
 
           return GestureDetector(
-            onPanStart: _onDragStart,
-            onPanUpdate: _onDragUpdate,
-            onPanEnd: (_) => _onDragEnd(index),
+            onTap: () => _onTileTap(index),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(

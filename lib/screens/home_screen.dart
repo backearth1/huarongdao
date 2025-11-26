@@ -24,7 +24,7 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
-                  '数字华容道',
+                  '菀尔华容道',
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
